@@ -8,9 +8,9 @@
     android:fitsSystemWindows="true"
     tools:context="com.github.prefanatic.theia.MainActivity">
 
-    <SurfaceView
-        android:layout_width="match_parent"
-        android:layout_height="match_parent"
+    <com.github.prefanatic.theia.AutoFitTextureView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
         android:id="@+id/surface_view"/>
 
 </android.support.design.widget.CoordinatorLayout>
