@@ -103,14 +103,14 @@
     <orderEntry type="library" exported="" name="rxandroid-1.0.1" level="project" />
     <orderEntry type="library" exported="" name="design-23.0.1" level="project" />
     <orderEntry type="library" exported="" name="timber-3.1.0" level="project" />
-    <orderEntry type="library" exported="" name="aspectjrt-1.8.5" level="project" />
     <orderEntry type="library" exported="" name="feature-0.18" level="project" />
+    <orderEntry type="library" exported="" name="aspectjrt-1.8.5" level="project" />
     <orderEntry type="library" exported="" name="hugo-runtime-1.2.1" level="project" />
     <orderEntry type="library" exported="" name="permissionsdispatcher-1.2.1" level="project" />
     <orderEntry type="library" exported="" name="rxjava-1.0.14" level="project" />
     <orderEntry type="library" exported="" name="georegression-0.7" level="project" />
-    <orderEntry type="library" exported="" name="ip-0.18" level="project" />
     <orderEntry type="library" exported="" name="calibration-0.18" level="project" />
+    <orderEntry type="library" exported="" name="ip-0.18" level="project" />
     <orderEntry type="library" exported="" name="core-0.26" level="project" />
     <orderEntry type="library" exported="" name="support-v4-23.0.1" level="project" />
     <orderEntry type="library" exported="" name="appcompat-v7-23.0.1" level="project" />

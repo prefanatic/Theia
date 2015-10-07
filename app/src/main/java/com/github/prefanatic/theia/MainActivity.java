@@ -2,12 +2,8 @@ package com.github.prefanatic.theia;
 
 import android.Manifest;
 import android.content.res.Configuration;
-import android.graphics.Bitmap;
-import android.graphics.BitmapFactory;
-import android.graphics.Canvas;
 import android.graphics.ImageFormat;
 import android.graphics.Matrix;
-import android.graphics.Paint;
 import android.graphics.RectF;
 import android.graphics.SurfaceTexture;
 import android.hardware.camera2.CameraAccessException;
@@ -35,6 +31,11 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 
+import boofcv.abst.feature.detdesc.DetectDescribePoint;
+import boofcv.abst.feature.detect.interest.ConfigFastHessian;
+import boofcv.factory.feature.detdesc.FactoryDetectDescribe;
+import boofcv.struct.feature.SurfFeature;
+import boofcv.struct.image.ImageUInt8;
 import hugo.weaving.DebugLog;
 import permissions.dispatcher.DeniedPermission;
 import permissions.dispatcher.NeedsPermission;
@@ -60,42 +61,30 @@ public class MainActivity extends AppCompatActivity {
 
     private final Object read = new Object();
 
+    private ImageUInt8 imageHold = new ImageUInt8();
+    private DetectDescribePoint<ImageUInt8, SurfFeature> surf = FactoryDetectDescribe.surfFast(
+            new ConfigFastHessian(10, 3, 100, 2, 9, 4, 4), null, null, ImageUInt8.class);
+
     private ImageReader.OnImageAvailableListener mImageReady = new ImageReader.OnImageAvailableListener() {
         @Override
         public void onImageAvailable(ImageReader reader) {
             Image image = reader.acquireLatestImage();
-            if (image == null) {
-                return;
-            }
+            if (image == null) return;
 
-            Image.Plane[] planes = image.getPlanes();
-            Timber.d("Planes: %d", planes.length);
+            /*
+            imageHold.setWidth(image.getWidth());
+            imageHold.setHeight(image.getHeight());
 
-
-            // Try to do some magic here.
-            Canvas canvas = mTextureView.lockCanvas();
-
-            ByteBuffer byteBuffer = planes[0].getBuffer();
+            ByteBuffer byteBuffer = image.getPlanes()[0].getBuffer();
             byte[] buffer = new byte[byteBuffer.remaining()];
             byteBuffer.get(buffer);
 
-            int x = 0;
-            int y = 0;
-            for (int i = 0; i < buffer.length; i++) {
-                if (x > canvas.getWidth()) {
-                    y++;
-                    x = 0;
-                }
+            imageHold.setData(buffer);
 
-                Paint paint = new Paint();
-                paint.setAlpha(buffer[i]);
+            surf.detect(imageHold);
 
-                canvas.drawPoint(x, y, paint);
-            }
-
-            canvas.save();
-
-            mTextureView.unlockCanvasAndPost(canvas);
+            Timber.d("Features: %d", surf.getNumberOfFeatures());
+            */
 
             image.close();
         }
@@ -151,8 +140,8 @@ public class MainActivity extends AppCompatActivity {
             texture.setDefaultBufferSize(mPreviewSize.getWidth(), mPreviewSize.getHeight());
             final Surface surface = new Surface(texture);
 
-            List<Surface> surfaceList = new ArrayList<>();
-            //surfaceList.add(surface);
+            final List<Surface> surfaceList = new ArrayList<>();
+            surfaceList.add(surface);
             surfaceList.add(mImageReader.getSurface());
 
             mCamera.createCaptureSession(surfaceList, new CameraCaptureSession.StateCallback() {
@@ -161,7 +150,7 @@ public class MainActivity extends AppCompatActivity {
                     mSession = session;
                     Timber.d("Preview session created.");
 
-                    CaptureRequest request = createRequest(mImageReader.getSurface());
+                    CaptureRequest request = createRequest(surfaceList);
                     if (request == null) {
                         Timber.e("Failed to create request.");
                         return;
@@ -185,11 +174,13 @@ public class MainActivity extends AppCompatActivity {
     }
 
     @DebugLog
-    private CaptureRequest createRequest(Surface surface) {
+    private CaptureRequest createRequest(List<Surface> surfaces) {
         try {
             CaptureRequest.Builder builder = mCamera.createCaptureRequest(CameraDevice.TEMPLATE_PREVIEW);
-            builder.addTarget(surface);
             builder.set(CaptureRequest.CONTROL_EFFECT_MODE, CameraMetadata.CONTROL_EFFECT_MODE_MONO);
+
+            for (Surface surface : surfaces)
+                builder.addTarget(surface);
 
             return builder.build();
         } catch (CameraAccessException e) {
