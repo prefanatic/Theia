@@ -1,12 +1,12 @@
 package com.github.prefanatic.theia;
 
-import android.util.Log;
 import android.util.Size;
 
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
+import boofcv.struct.image.ImageUInt8;
 import timber.log.Timber;
 
 public class Util {
@@ -22,17 +22,26 @@ public class Util {
             }
         }
 
-        // FIXME: 9/27/2015 Return 640x800 #yolo
-        return new Size(800, 640);
-
-        /*
         // Pick the smallest of those, assuming we found any
         if (bigEnough.size() > 0) {
             return Collections.min(bigEnough, new AreaComparator());
         } else {
             Timber.e("Couldn't find any suitable preview size");
             return choices[0];
-        }*/
+        }
+    }
+
+    public static void sobel(ImageUInt8 input) {
+        int indexDst = 0;
+        byte[] storage = new byte[input.getHeight() * input.getWidth()];
+
+        for (int y = 0; y < input.height; y++) {
+            int indexSrc = input.startIndex + y * input.stride;
+            for (int x = 0; x < input.width; x++) {
+                int value = input.data[indexSrc++];
+
+            }
+        }
     }
 
 }

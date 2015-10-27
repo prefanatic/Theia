@@ -33,9 +33,20 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 
+import boofcv.abst.feature.detect.interest.ConfigGeneralDetector;
+import boofcv.abst.feature.tracker.PointTracker;
+import boofcv.abst.sfm.d2.ImageMotion2D;
+import boofcv.alg.background.BackgroundModelMoving;
+import boofcv.alg.distort.PointTransformHomography_F32;
 import boofcv.android.ConvertBitmap;
-import boofcv.android.VisualizeImageData;
+import boofcv.factory.background.ConfigBackgroundBasic;
+import boofcv.factory.background.FactoryBackgroundModel;
+import boofcv.factory.feature.tracker.FactoryPointTracker;
+import boofcv.factory.sfm.FactoryMotion2D;
+import boofcv.struct.image.ImageFloat32;
+import boofcv.struct.image.ImageType;
 import boofcv.struct.image.ImageUInt8;
+import georegression.struct.homography.Homography2D_F64;
 import hugo.weaving.DebugLog;
 import permissions.dispatcher.DeniedPermission;
 import permissions.dispatcher.NeedsPermission;
@@ -59,8 +70,19 @@ public class MainActivity extends AppCompatActivity {
 
     private int mSurfaceWidth, mSurfaceHeight;
 
+    ImageType imageType = ImageType.single(ImageUInt8.class);
+    ConfigGeneralDetector configGeneralDetector = new ConfigGeneralDetector(10, 6, 300);
+    ConfigBackgroundBasic configBasic = new ConfigBackgroundBasic(30, 0.005f);
+    PointTracker pointTracker = FactoryPointTracker.klt(new int[]{1, 2, 4, 8}, configGeneralDetector, 3,
+            ImageUInt8.class, null);
+    ImageMotion2D<ImageUInt8, Homography2D_F64> motion2D =
+            FactoryMotion2D.createMotion2D(500, 0.5, 3, 100, 0.6, 0.5, false, pointTracker, new Homography2D_F64());
+    BackgroundModelMoving background =
+            FactoryBackgroundModel.movingBasic(configBasic, new PointTransformHomography_F32(), imageType);
+
     private ImageUInt8[] imageUInt8Array;
     private ImageUInt8 boofImage;
+    private ImageFloat32 convertedImage;
     private Bitmap processedImage;
     private byte[] storage;
 
@@ -81,15 +103,14 @@ public class MainActivity extends AppCompatActivity {
                 BUFFER_SIZE = buffer.remaining();
                 processStorage = new byte[BUFFER_SIZE];
             }
-            Timber.d("Row Stride %d , Pixel Stride %d", rowStride, pixelStride);
-            Timber.d(" %d, %d", boofImage.getWidth(), boofImage.getHeight());
+
 
             buffer.get(processStorage);
 
             boofImage.setData(processStorage);
             boofImage.setStride(rowStride);
 
-            VisualizeImageData.binaryToBitmap(boofImage, processedImage, storage);
+            convertToBitmap(boofImage, processedImage, storage);
 
             Canvas canvas = mTextureView.lockCanvas();
             canvas.drawBitmap(processedImage, 0, 0, null);
@@ -99,6 +120,24 @@ public class MainActivity extends AppCompatActivity {
             image.close();
         }
     };
+
+    private void convertToBitmap(ImageUInt8 input, Bitmap output, byte[] storage) {
+        //Timber.d("%d", input.getWidth() * input.getHeight());
+        int indexDst = 0;
+        for (int y = 0; y < input.height - 40; y++) {
+            int indexSrc = input.startIndex + y * input.stride;
+            for (int x = 0; x < input.width; x++) {
+                int value = input.data[indexSrc++];
+
+                storage[indexDst++] = (byte) value;
+                storage[indexDst++] = (byte) value;
+                storage[indexDst++] = (byte) value;
+                storage[indexDst++] = (byte) 0xFF;
+            }
+        }
+
+        output.copyPixelsFromBuffer(ByteBuffer.wrap(storage));
+    }
 
     private TextureView.SurfaceTextureListener surfaceTextureListener = new TextureView.SurfaceTextureListener() {
         @Override
@@ -138,7 +177,7 @@ public class MainActivity extends AppCompatActivity {
         mTextureView = (AutoFitTextureView) findViewById(R.id.surface_view);
         mManager = getSystemService(CameraManager.class);
 
-        //InterestPointDetector<MultiSpectral<ImageUInt8>> detector =
+
     }
 
     @DebugLog
@@ -151,7 +190,7 @@ public class MainActivity extends AppCompatActivity {
             final Surface surface = new Surface(texture);
 
             final List<Surface> surfaceList = new ArrayList<>();
-            surfaceList.add(surface);
+            //surfaceList.add(surface);
             surfaceList.add(mImageReader.getSurface());
 
             mCamera.createCaptureSession(surfaceList, new CameraCaptureSession.StateCallback() {
@@ -270,7 +309,7 @@ public class MainActivity extends AppCompatActivity {
                         mTextureView.setAspectRatio(mPreviewSize.getHeight(), mPreviewSize.getWidth());
                     }
 
-                    configureTransform(mSurfaceWidth, mSurfaceHeight);
+                    //configureTransform(mSurfaceWidth, mSurfaceHeight);
 
                     mImageReader = ImageReader.newInstance(mPreviewSize.getWidth(), mPreviewSize.getHeight(), ImageFormat.YUV_420_888, 2);
                     mImageReader.setOnImageAvailableListener(mImageReady, mBackgroundHandler);
@@ -278,6 +317,7 @@ public class MainActivity extends AppCompatActivity {
                     Timber.d("Projected buffer size: %d", mPreviewSize.getWidth() * mPreviewSize.getHeight());
 
                     boofImage = new ImageUInt8(mPreviewSize.getWidth(), mPreviewSize.getHeight());
+                    convertedImage = new ImageFloat32(mPreviewSize.getWidth(), mPreviewSize.getHeight());
                     processedImage = Bitmap.createBitmap(mPreviewSize.getWidth(), mPreviewSize.getHeight(), Bitmap.Config.ARGB_8888);
                     storage = ConvertBitmap.declareStorage(processedImage, storage);
 
