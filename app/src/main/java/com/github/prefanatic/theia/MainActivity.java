@@ -2,6 +2,8 @@ package com.github.prefanatic.theia;
 
 import android.Manifest;
 import android.content.res.Configuration;
+import android.graphics.Bitmap;
+import android.graphics.Canvas;
 import android.graphics.ImageFormat;
 import android.graphics.Matrix;
 import android.graphics.RectF;
@@ -31,10 +33,8 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 
-import boofcv.abst.feature.detdesc.DetectDescribePoint;
-import boofcv.abst.feature.detect.interest.ConfigFastHessian;
-import boofcv.factory.feature.detdesc.FactoryDetectDescribe;
-import boofcv.struct.feature.SurfFeature;
+import boofcv.android.ConvertBitmap;
+import boofcv.android.VisualizeImageData;
 import boofcv.struct.image.ImageUInt8;
 import hugo.weaving.DebugLog;
 import permissions.dispatcher.DeniedPermission;
@@ -59,11 +59,13 @@ public class MainActivity extends AppCompatActivity {
 
     private int mSurfaceWidth, mSurfaceHeight;
 
-    private final Object read = new Object();
+    private ImageUInt8[] imageUInt8Array;
+    private ImageUInt8 boofImage;
+    private Bitmap processedImage;
+    private byte[] storage;
 
-    private ImageUInt8 imageHold = new ImageUInt8();
-    private DetectDescribePoint<ImageUInt8, SurfFeature> surf = FactoryDetectDescribe.surfFast(
-            new ConfigFastHessian(10, 3, 100, 2, 9, 4, 4), null, null, ImageUInt8.class);
+    private int BUFFER_SIZE = 0;
+    private byte[] processStorage;
 
     private ImageReader.OnImageAvailableListener mImageReady = new ImageReader.OnImageAvailableListener() {
         @Override
@@ -71,20 +73,28 @@ public class MainActivity extends AppCompatActivity {
             Image image = reader.acquireLatestImage();
             if (image == null) return;
 
-            /*
-            imageHold.setWidth(image.getWidth());
-            imageHold.setHeight(image.getHeight());
+            ByteBuffer buffer = image.getPlanes()[0].getBuffer();
+            int rowStride = image.getPlanes()[0].getRowStride();
+            int pixelStride = image.getPlanes()[0].getPixelStride();
 
-            ByteBuffer byteBuffer = image.getPlanes()[0].getBuffer();
-            byte[] buffer = new byte[byteBuffer.remaining()];
-            byteBuffer.get(buffer);
+            if (BUFFER_SIZE == 0) {
+                BUFFER_SIZE = buffer.remaining();
+                processStorage = new byte[BUFFER_SIZE];
+            }
+            Timber.d("Row Stride %d , Pixel Stride %d", rowStride, pixelStride);
+            Timber.d(" %d, %d", boofImage.getWidth(), boofImage.getHeight());
 
-            imageHold.setData(buffer);
+            buffer.get(processStorage);
 
-            surf.detect(imageHold);
+            boofImage.setData(processStorage);
+            boofImage.setStride(rowStride);
 
-            Timber.d("Features: %d", surf.getNumberOfFeatures());
-            */
+            VisualizeImageData.binaryToBitmap(boofImage, processedImage, storage);
+
+            Canvas canvas = mTextureView.lockCanvas();
+            canvas.drawBitmap(processedImage, 0, 0, null);
+
+            mTextureView.unlockCanvasAndPost(canvas);
 
             image.close();
         }
@@ -262,8 +272,14 @@ public class MainActivity extends AppCompatActivity {
 
                     configureTransform(mSurfaceWidth, mSurfaceHeight);
 
-                    mImageReader = ImageReader.newInstance(largest.getWidth(), largest.getHeight(), ImageFormat.YUV_420_888, 2);
+                    mImageReader = ImageReader.newInstance(mPreviewSize.getWidth(), mPreviewSize.getHeight(), ImageFormat.YUV_420_888, 2);
                     mImageReader.setOnImageAvailableListener(mImageReady, mBackgroundHandler);
+
+                    Timber.d("Projected buffer size: %d", mPreviewSize.getWidth() * mPreviewSize.getHeight());
+
+                    boofImage = new ImageUInt8(mPreviewSize.getWidth(), mPreviewSize.getHeight());
+                    processedImage = Bitmap.createBitmap(mPreviewSize.getWidth(), mPreviewSize.getHeight(), Bitmap.Config.ARGB_8888);
+                    storage = ConvertBitmap.declareStorage(processedImage, storage);
 
                     return id;
                 }
