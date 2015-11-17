@@ -108,18 +108,47 @@ public class Util {
         subtract(image, storedImages[poolIndex]);
     }
 
-    public static void subtract(GrayImage currentImage, GrayImage previousImage) {
-        byte[] result = new byte[currentImage.data.length];
-        int index;
+    private static int maximumPixelCountThreshold = 128000;
+    public static void detectionPainter(int threshold, GrayImage current, GrayImage background, Bitmap output, byte[] storage) {
+        int i, h, w, val;
+        int bitmapIndex = 0;
+        int pixelCountAboveThreshold = 0;
 
-        for (int h = 0; h < currentImage.height; h++) {
-            index = h * currentImage.width;
-            for (int w = 0; w < currentImage.width; w++) {
+        for (h = 0; h < current.height; h++) {
+            i = h * current.width;
+            for (w = 0; w < current.width; w++) {
+                if (Math.abs((0xFF & current.data[i]) - (0xFF & background.data[i])) >= threshold) {
+                    val = 255;
+                    pixelCountAboveThreshold++;
+                } else
+                    val = 0;
 
-                currentImage.data[index + w] = clampToGrayscale(currentImage.data[index + w] - previousImage.data[index + w]);
+                storage[bitmapIndex++] = (byte) val;
+                storage[bitmapIndex++] = (byte) val;
+                storage[bitmapIndex++] = (byte) val;
+                storage[bitmapIndex++] = (byte) 0xFF;
+
+                i += 1;
             }
         }
 
+        output.copyPixelsFromBuffer(ByteBuffer.wrap(storage));
+
+        // Reset our background image if we've detected too much motion.
+        if (pixelCountAboveThreshold > maximumPixelCountThreshold)
+            background.data = null;
+    }
+
+    public static void subtract(GrayImage currentImage, GrayImage previousImage) {
+        int index, h, w;
+
+        for (h = 0; h < currentImage.height; h++) {
+            index = h * currentImage.width;
+            for (w = 0; w < currentImage.width; w++) {
+
+                currentImage.data[index + w] = clampToGrayscale(Math.abs((0xFF & currentImage.data[index + w]) - (0xFF & previousImage.data[index + w])));
+            }
+        }
     }
 
     private static byte clampToGrayscale(int val) {

@@ -26,6 +26,7 @@ import android.support.v7.app.AppCompatActivity;
 import android.util.Size;
 import android.view.Surface;
 import android.view.TextureView;
+import android.view.View;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -59,6 +60,7 @@ public class MainActivity extends AppCompatActivity {
 
     private GrayImage latestImage = new GrayImage();
     private GrayImage previousImage;
+    private final GrayImage background = new GrayImage();
     private Bitmap processedImage;
     private byte[] storage;
 
@@ -68,6 +70,7 @@ public class MainActivity extends AppCompatActivity {
     private byte[] processStorage;
     private long lastFrameTime = 0;
     private int frameCount = 0;
+    private boolean resetBackground = false;
 
     private ImageReader.OnImageAvailableListener mImageReady = new ImageReader.OnImageAvailableListener() {
         @Override
@@ -82,15 +85,25 @@ public class MainActivity extends AppCompatActivity {
                 lastFrameTime = System.currentTimeMillis() + 1000;
             }
 
+            if (background.data == null || resetBackground) {
+                Util.imageToGrayImage(image, background);
+                image.close();
+                resetBackground = false;
+                return;
+            }
+
             Util.imageToGrayImage(image, latestImage);
-            //Util.median(latestImage, 5);
-            //Util.binarize(latestImage, 10);
+            //Util.median(latestImage);
             //Util.addToPool(latestImage);
             //Util.subtractFromAveragedPool(latestImage);
-            //Util.subtractFromPool(latestImage, 3);
-            Util.sobel(latestImage);
+            //Util.subtractFromPool(latestImage, 12);
+            //Util.binarize(latestImage, 50);
 
-            Util.convertToBitmap(latestImage, processedImage, storage);
+            //Util.subtract(latestImage, background);
+            //Util.binarize(latestImage, 50);
+
+            //Util.convertToBitmap(latestImage, processedImage, storage);
+            Util.detectionPainter(50, latestImage, background, processedImage, storage);
 
             Canvas canvas = mTextureView.lockCanvas();
             canvas.drawBitmap(processedImage, 0, 0, null);
@@ -138,6 +151,13 @@ public class MainActivity extends AppCompatActivity {
 
         mTextureView = (AutoFitTextureView) findViewById(R.id.surface_view);
         mManager = getSystemService(CameraManager.class);
+
+        mTextureView.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                resetBackground = true;
+            }
+        });
 
 
     }
