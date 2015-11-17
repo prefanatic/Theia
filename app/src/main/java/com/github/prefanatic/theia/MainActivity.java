@@ -66,6 +66,8 @@ public class MainActivity extends AppCompatActivity {
 
     private int BUFFER_SIZE = 0;
     private byte[] processStorage;
+    private long lastFrameTime = 0;
+    private int frameCount = 0;
 
     private ImageReader.OnImageAvailableListener mImageReady = new ImageReader.OnImageAvailableListener() {
         @Override
@@ -73,12 +75,20 @@ public class MainActivity extends AppCompatActivity {
             Image image = reader.acquireLatestImage();
             if (image == null) return;
 
+            frameCount++;
+            if (System.currentTimeMillis() > lastFrameTime) {
+                Timber.d("FPS %d", frameCount);
+                frameCount = 0;
+                lastFrameTime = System.currentTimeMillis() + 1000;
+            }
+
             Util.imageToGrayImage(image, latestImage);
-            Util.median(latestImage);
-            Util.addToPool(latestImage);
+            //Util.median(latestImage, 5);
+            //Util.binarize(latestImage, 10);
+            //Util.addToPool(latestImage);
             //Util.subtractFromAveragedPool(latestImage);
-            //Util.subtractFromPool(latestImage, 12);
-            //Util.binarize(latestImage, 50);
+            //Util.subtractFromPool(latestImage, 3);
+            Util.sobel(latestImage);
 
             Util.convertToBitmap(latestImage, processedImage, storage);
 
@@ -249,7 +259,9 @@ public class MainActivity extends AppCompatActivity {
                     Size largest = Collections.max(
                             Arrays.asList(mSizeArray), new AreaComparator()
                     );
+
                     mPreviewSize = Util.chooseOptimalSize(map.getOutputSizes(SurfaceTexture.class), mSurfaceWidth, mSurfaceHeight, largest);
+                    mPreviewSize = new Size(640, 480);
 
                     Timber.d("Largest is %d x %d.", largest.getWidth(), largest.getHeight());
                     Timber.d("Choosing %d x %d as preview.", mPreviewSize.getWidth(), mPreviewSize.getHeight());

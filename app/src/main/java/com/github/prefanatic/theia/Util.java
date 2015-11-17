@@ -88,6 +88,20 @@ public class Util {
         subtract(image, sub);
     }
 
+    public static void thresholdDifferenceFromPool(GrayImage image, int poolIndex) {
+        if (poolIndex > storedImages.length - 1) return;
+    }
+
+    public static void thresholdDifference(GrayImage currentImage, GrayImage previousImage) {
+        int index;
+        for (int h = 0; h < currentImage.height; h++) {
+            index = h * currentImage.width;
+            for (int w = 0; w < currentImage.width; w++) {
+
+            }
+        }
+    }
+
     public static void subtractFromPool(GrayImage image, int poolIndex) {
         if (poolIndex > storedImages.length - 1) return;
 
@@ -130,28 +144,32 @@ public class Util {
             {1, 1, 1}
     };
 
-    public static void median(GrayImage input) {
+    public static void median(GrayImage input, int passes) {
         int index;
         int kernelIndex = 0;
         int sum = 0;
         byte[] data = new byte[input.data.length];
         byte[] kernelStorage = new byte[9];
 
-        for (int y = 1; y < input.height - 2; y++) {
-            index = y * input.width;
-            for (int x = 1; x < input.width - 2; x++) {
-                kernelIndex = 0;
-                for (int m = -1; m <= 1; m++) {
-                    for (int n = -1; n <= 1; n++) {
-                        kernelStorage[kernelIndex++] = input.data[index + x + n + (m * input.width)];
+        for (int i = 0; i < passes; i++) {
+            index = 0;
+
+            for (int y = 1; y < input.height - 2; y++) {
+                index = y * input.width;
+                for (int x = 1; x < input.width - 2; x++) {
+                    kernelIndex = 0;
+                    for (int m = -1; m <= 1; m++) {
+                        for (int n = -1; n <= 1; n++) {
+                            kernelStorage[kernelIndex++] = input.data[index + x + n + (m * input.width)];
+                        }
                     }
+
+                    data[index + x] = clampToGrayscale(kernelStorage[4]);
                 }
-
-                data[index + x] = clampToGrayscale(kernelStorage[4]);
             }
-        }
 
-        input.data = data;
+            input.data = data;
+        }
     }
 
     private static int[][] SOBEL_KERNEL_X = new int[][]{
@@ -166,29 +184,28 @@ public class Util {
     };
 
     //@DebugLog
-    public static void sobel(byte[] input, int width, int height) {
+    public static void sobel(GrayImage input) {
         int indexSrc, value, sumX, sumY;
 
-        for (int y = 1; y < height - 2; y++) {
-            indexSrc = y * width;
-            for (int x = 1; x < width - 2; x++) {
+        for (int y = 1; y < input.height - 2; y++) {
+            indexSrc = 1 + y * input.width;
+            for (int x = 1; x < input.width - 2; x++) {
                 sumX = 0;
                 sumY = 0;
 
                 for (int m = -1; m < 2; m++) {
                     for (int n = -1; n < 2; n++) {
-                        value = input[indexSrc + m + (n * width)];
+                        value = input.data[indexSrc + m + (n * input.width)];
 
                         sumX += value * SOBEL_KERNEL_X[m + 1][n + 1];
-                        sumY += value * SOBEL_KERNEL_Y[m + 1][n + 1];
+                        //sumY += value * SOBEL_KERNEL_Y[m + 1][n + 1];
                     }
                 }
 
                 indexSrc++;
 
-                Timber.d("%d", Math.abs(sumX) + Math.abs(sumY));
-                //input[indexSrc - 1] = (byte) (Math.abs(sumX) + Math.abs(sumY));
-                input[indexSrc - 1] = (byte) 255;
+                input.data[indexSrc - 1] = clampToGrayscale(Math.abs(sumX) + Math.abs(sumY));
+                //input.data[indexSrc - 1] = (byte) 255;
             }
         }
 

@@ -28,9 +28,6 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
-        <activity
-            android:name=".BoofVideoDisplayActivity"
-            android:exported="true" />
         <activity android:name=".OpenCVActivity"
                   android:exported="true"/>
     </application>
