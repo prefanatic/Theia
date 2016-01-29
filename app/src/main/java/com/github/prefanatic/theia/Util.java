@@ -109,6 +109,7 @@ public class Util {
     }
 
     private static int maximumPixelCountThreshold = 128000;
+
     public static void detectionPainter(int threshold, GrayImage current, GrayImage background, Bitmap output, byte[] storage) {
         int i, h, w, val;
         int bitmapIndex = 0;
@@ -129,6 +130,14 @@ public class Util {
                 storage[bitmapIndex++] = (byte) 0xFF;
 
                 i += 1;
+            }
+        }
+
+        // Low pass :(
+        for (h = 1; h < current.height - 2; h++) {
+            i = h * current.width;
+            for (w = 1; w < current.width - 2; w++) {
+
             }
         }
 
@@ -167,6 +176,68 @@ public class Util {
         }
     }
 
+    private static void collapseIntoBelt(GrayImage image) {
+        int i, x, y;
+        for (y = 0; y < image.height; y++) {
+            i = y * image.width;
+            for (x = 0; x < image.width; x++) {
+
+            }
+        }
+    }
+
+    private static float[][] GAUSSIAN_KERNEL;
+    private static int radiusLooper = -1;
+    private static int radius = 7;
+    private static int sigma = 1;
+
+    public static void gaussianBlur(GrayImage input) {
+        if (GAUSSIAN_KERNEL == null) {
+            generateGaussianKernel();
+        }
+
+        int i, y, x, kernX, kernY;
+        float sum;
+        for (y = radiusLooper; y < input.height - (radiusLooper * 2); y++) {
+            i = y * input.width;
+            for (x = radiusLooper; x < input.width - (radiusLooper * 2); x++) {
+                sum = 0;
+                for (kernY = radiusLooper * -1; kernY <= radiusLooper; kernY++) {
+                    for (kernX = radiusLooper * -1; kernX <= radiusLooper; kernX++) {
+                        sum += input.data[i + x + kernX + (kernY * input.width)] * GAUSSIAN_KERNEL[kernY + radiusLooper][kernX + radiusLooper];
+                    }
+                }
+
+                input.data[i + x] = clampToGrayscale((int) sum);
+
+            }
+        }
+    }
+
+    private static void generateGaussianKernel() {
+        GAUSSIAN_KERNEL = new float[radius][radius];
+
+        int xx, yy;
+        float sum = 0;
+        for (int y = 0; y < radius; y++) {
+            for (int x = 0; x < radius; x++) {
+                xx = x - radius / 2;
+                yy = y - radius / 2;
+                GAUSSIAN_KERNEL[y][x] = (float) Math.pow(Math.E, -(xx * xx + yy * yy)
+                        / (2 * (sigma * sigma)));
+                sum += GAUSSIAN_KERNEL[y][x];
+            }
+        }
+
+        for (int i = 0; i < radius; i++) {
+            for (int b = 0; b < radius; b++) {
+                GAUSSIAN_KERNEL[i][b] /= sum;
+            }
+        }
+
+        radiusLooper = radius / 2;
+    }
+
     private static int[][] MEDIAN_KERNEL = new int[][]{
             {1, 1, 1},
             {1, 1, 1},
@@ -198,6 +269,34 @@ public class Util {
             }
 
             input.data = data;
+        }
+    }
+
+    private static int[][] LOWPASS_KERNEL = new int[][]{
+            {1, 1, 1},
+            {1, 1, 1},
+            {1, 1, 1}
+    };
+
+    public static void lowPass(GrayImage input) {
+        int indexSrc, value, sum, x, y, m, n;
+
+        for (y = 1; y < input.height - 2; y++) {
+            indexSrc = 1 + y * input.width;
+            for (x = 1; x < input.width - 2; x++) {
+                sum = 0;
+
+                for (m = -1; m < 2; m++) {
+                    for (n = -1; n < 2; n++) {
+                        value = input.data[indexSrc + m + (n * input.width)];
+
+                        sum += value * LOWPASS_KERNEL[m + 1][n + 1];
+                    }
+                }
+
+                indexSrc++;
+                input.data[indexSrc - 1] = clampToGrayscale((int) (1f / (9f * sum)));
+            }
         }
     }
 

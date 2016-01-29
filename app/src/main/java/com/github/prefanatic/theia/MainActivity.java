@@ -93,16 +93,16 @@ public class MainActivity extends AppCompatActivity {
             }
 
             Util.imageToGrayImage(image, latestImage);
-            //Util.median(latestImage);
+            //Util.median(latestImage, 5);
+            //Util.binarize(latestImage, 10);
             //Util.addToPool(latestImage);
             //Util.subtractFromAveragedPool(latestImage);
-            //Util.subtractFromPool(latestImage, 12);
-            //Util.binarize(latestImage, 50);
+            //Util.subtractFromPool(latestImage, 3);
+            //Util.sobel(latestImage);
 
-            //Util.subtract(latestImage, background);
-            //Util.binarize(latestImage, 50);
-
+            //Util.gaussianBlur(latestImage);
             //Util.convertToBitmap(latestImage, processedImage, storage);
+            Util.lowPass(latestImage);
             Util.detectionPainter(50, latestImage, background, processedImage, storage);
 
             Canvas canvas = mTextureView.lockCanvas();
