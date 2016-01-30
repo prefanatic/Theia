@@ -102,7 +102,7 @@ public class MainActivity extends AppCompatActivity {
 
             //Util.gaussianBlur(latestImage);
             //Util.convertToBitmap(latestImage, processedImage, storage);
-            Util.lowPass(latestImage);
+            //Util.lowPass(latestImage);
             Util.detectionPainter(50, latestImage, background, processedImage, storage);
 
             Canvas canvas = mTextureView.lockCanvas();

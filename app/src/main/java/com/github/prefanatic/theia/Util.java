@@ -109,9 +109,11 @@ public class Util {
     }
 
     private static int maximumPixelCountThreshold = 128000;
+    private static byte constant0xFF = (byte) 0xFF;
 
     public static void detectionPainter(int threshold, GrayImage current, GrayImage background, Bitmap output, byte[] storage) {
-        int i, h, w, val;
+        int i, h, w, m, n, sum;
+        byte val;
         int bitmapIndex = 0;
         int pixelCountAboveThreshold = 0;
 
@@ -119,24 +121,41 @@ public class Util {
             i = h * current.width;
             for (w = 0; w < current.width; w++) {
                 if (Math.abs((0xFF & current.data[i]) - (0xFF & background.data[i])) >= threshold) {
-                    val = 255;
+                    val = constant0xFF;
                     pixelCountAboveThreshold++;
-                } else
+                } else {
                     val = 0;
+                }
 
-                storage[bitmapIndex++] = (byte) val;
-                storage[bitmapIndex++] = (byte) val;
-                storage[bitmapIndex++] = (byte) val;
-                storage[bitmapIndex++] = (byte) 0xFF;
+                current.data[i] = val;
 
                 i += 1;
             }
         }
 
-        // Low pass :(
         for (h = 1; h < current.height - 2; h++) {
             i = h * current.width;
             for (w = 1; w < current.width - 2; w++) {
+                sum = 0;
+
+               /* for (m = -1; m < 2; m++) {
+                    for (n = -1; n < 2; n++) {
+                        val = current.data[i + m + (n * current.width)];
+
+                        sum += val;
+                    }
+                }*/
+
+                sum = current.data[i];
+
+                i++;
+
+                //val = clampToGrayscale((int) (1.0 / (9.0 * sum)));
+                val = (byte) sum;
+                storage[bitmapIndex++] = val;
+                storage[bitmapIndex++] = val;
+                storage[bitmapIndex++] = val;
+                storage[bitmapIndex++] = constant0xFF;
 
             }
         }
@@ -272,12 +291,6 @@ public class Util {
         }
     }
 
-    private static int[][] LOWPASS_KERNEL = new int[][]{
-            {1, 1, 1},
-            {1, 1, 1},
-            {1, 1, 1}
-    };
-
     public static void lowPass(GrayImage input) {
         int indexSrc, value, sum, x, y, m, n;
 
@@ -290,7 +303,7 @@ public class Util {
                     for (n = -1; n < 2; n++) {
                         value = input.data[indexSrc + m + (n * input.width)];
 
-                        sum += value * LOWPASS_KERNEL[m + 1][n + 1];
+                        sum += value;
                     }
                 }
 
